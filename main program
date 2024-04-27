@@ -1,0 +1,186 @@
+//main program//
+#include<LPC21xx.h>
+#include"header.h"
+char temp[100];
+//int flag;
+extern int i;
+//char empl[50];
+int main()
+{
+char empl[50];
+int flag1=0,k,j;
+//int i;
+unsigned char h,m,s,a;
+unsigned char date,month,year,day;
+unsigned int index[7]={1,2,3,4,5,6,7};
+
+i2c_init();
+lcd_init();
+uart0_init(9600);
+config_VIC();
+en_uart0_intr();
+
+
+uart0_tx_string("DS 1307 RTC\r\n");
+
+i2c_byte_write_frame(0xD0,0x2,0x67);  //hrs
+i2c_byte_write_frame(0xD0,0x1,0x14);  //minutes
+i2c_byte_write_frame(0xD0,0x0,0x50);  //second
+
+i2c_byte_write_frame(0xD0,0x4,0x24); //date
+i2c_byte_write_frame(0xD0,0x5,0x01);  //month
+i2c_byte_write_frame(0xD0,0x6,0x21);	//year
+
+	
+while(1)
+{
+  h=i2c_byte_read_frame(0xD0,0x2); //hrs
+  m=i2c_byte_read_frame(0xD0,0x1);//minutes
+  s=i2c_byte_read_frame(0xD0,0x0); //second
+ 
+
+   a=h&0x1f;
+ 
+  date=i2c_byte_read_frame(0xD0,0x4);  //date
+  month=i2c_byte_read_frame(0xD0,0x5);//month
+  year=i2c_byte_read_frame(0xD0,0x6); //year
+
+  day=i2c_byte_read_frame(0xD0,0x3);
+
+   lcd_cmd(0x80);
+
+    //lcd_cmd(0x01);
+	//hrs//
+  lcd_data((a/0x10)+48);
+  lcd_data((a%0x10)+48);			
+  lcd_data(':');
+	//minutes//
+  lcd_data((m/16)+48);
+  lcd_data((m%0x10)+48);
+  lcd_data(':');
+	//seconds//
+  lcd_data((s/0x10)+48);
+  lcd_data((s%0x10)+48);
+
+			   //AM & PM//
+	  if((h>>5&1)==1)
+	   {
+         lcd_string(" PM"); 
+	//	flag==0;
+		}
+		else
+		{
+		 lcd_string(" AM");
+		 }
+  		 
+ 	
+
+   lcd_cmd(0xc0);
+		//day//
+   lcd_data((date/0x10)+48);
+   lcd_data((date%0x10)+48);
+   lcd_data('/');
+		   //month//
+   lcd_data((month/0x10)+48);
+   lcd_data((month%0x10)+48);
+   lcd_data('/');
+		   //year//
+   lcd_data((year/0x10)+48);
+   lcd_data((year%0x10)+48);
+
+    //days//
+  	switch(day)
+	{
+	 case 1:if(index[1]==1)
+	         {
+	           lcd_string(" sun");
+	           break;
+					 }
+
+    case 2:if(index[2]==2)
+		       {
+	         	lcd_string(" mon");
+			      break;
+					 }
+
+   	 case 3:if(index[3]==3)
+		        {
+	           lcd_string(" tue");
+			       break;
+						}
+	 case 4:if(index[4]==4)
+	        {
+	         lcd_string(" wed");
+			     break;
+					 }
+     case 5:if(index[5]==5)
+		        {
+	             lcd_string(" thu");
+			        break;
+						}
+	 case 6:if(index[6]==6)
+	        {
+	         lcd_string(" fri");
+			     break;
+					 }
+	 case 7:if(index[7]==7)
+	        {
+	          lcd_string(" sat");
+			      break;
+			 }
+		}	
+		
+		  
+			if(i==12)
+			  {
+				    flag1=1;
+				//	flag=0;
+		       		uart0_tx_string(temp);
+					uart0_tx_string("\r\n");
+			    	i=0;
+		     }
+
+	         if(flag1==1)
+			{
+			for(j=0,k=0;j<12;k++)
+			
+			empl[j++]=temp[k];
+			empl[j++]=' ';
+			
+		 	empl[j++]=(a/0x10)+48;
+			empl[j++]=(a%0x10)+48;
+			empl[j++]=':';
+
+			empl[j++]=(m/0x10)+48;
+			empl[j++]=(m%0x10)+48;
+			empl[j++]=':';
+
+			empl[j++]=(s/0x10)+48;
+			empl[j++]=(s%0x10)+48;
+			empl[j++]=':';
+			empl[j++]=' ';
+
+			empl[j++]=(date/0x10)+48;
+			empl[j++]=(date%0x10)+48;
+			empl[j++]='/';
+
+			empl[j++]=(month/0x10)+48;
+			empl[j++]=(month%0x10)+48;
+			empl[j++]='/';
+
+			empl[j++]=(year/0x10)+48;
+			empl[j++]=(year%0x10)+48;
+			
+
+			empl[j++]='\r';
+			empl[j++]='\n';
+			empl[j]='\0';
+
+			uart0_tx_string(empl);
+			uart0_tx_string("\r\n");
+			flag1=0;
+
+       }
+	  	  
+	}
+}
